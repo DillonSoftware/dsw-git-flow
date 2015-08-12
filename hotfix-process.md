@@ -11,6 +11,8 @@ Create a hotfix branch using one of these two commands:
 
 Both of those branch from `master` to `hotfixes/2.0.4`
 
+**You should immediately change the version number in the pom.xml to represent the hotfix version.**
+
 Changes are made directly to the hotfix branch, not a branch from it. These changes are pushed to the remote repository when completed.
 
 > At this point the task status is: `written`
