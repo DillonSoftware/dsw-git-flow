@@ -2,7 +2,7 @@
 
 > NOTE #1: Remember that git is NOT subversion.
 
-> NOTE #2: Be sure you have a recent git release (I'd suggest 2.3+).
+> NOTE #2: Be sure you have a recent git release (I'd suggest 2.3+, the latest version as of today is 2.5.0).
 
 > NOTE #3: This is not a git tutorial, it is a process explanation - if you see a git command and think "What's that mean?", you should google it.
 
@@ -12,7 +12,7 @@ __Change the task status to "in review" now__.
 
 Does it have test notes so someone can verify that it works as expected?
 
-> NOTE: If you are reviewing a task that you are familiar with, and think "Gee, I don't need testing notes, I know how this should work...", you're wrong. :) Add the testing notes to the task. The task system is the system of record for tasks, not your brain. If you get hit by a truck, someone else should be able to review and verify that the code works.
+> NOTE: If you are reviewing a task that you are familiar with, and think "Gee, I don't need testing notes, I know how this should work...", you're wrong. :) Add testing notes to the task or ask the developer to do so. The task system is the system of record for tasks, not your brain. If you get hit by a truck, someone else should be able to review and verify that the code works.
 
 #### Get the latest `develop` branch from the remote repository:
 
@@ -47,16 +47,24 @@ If there are merge conflicts, you may want to contact the developer who worked t
 
 If there were any sql or java changes, run the full suite of tests now on the feature branch. If there are any problems or a coverage drop, you can either fix them yourself if they are easy, or throw it back to the developer.
 
-Finally, the code review part of "code review". Look at the diff of each changed file while on the feature branch from within IDEA. Check it for
+Finally, the code review part of "code review". Look at the diff of each changed file while on the feature branch from within IDEA. 
 
- - compliance with established conventions
+At a minimum, check for:
+
+
+ - readability: compliance with established conventions
    - formatting, naming, logging, comments, and spelling
    - whitespaceisfreesoyoushoulduseitbecauseitmakesthingseasiertoread
- - sound, well organized code
-   - use checkstyle and idea's analysis (at least)
- - (optional) that it actually works
+ - structure: sound, well-organized code
+   - no Rube Goldberg machines!
+   - use checkstyle and idea's analysis (at the very least)
+   - is the structure architecturally thought out or did it evolve organically by trial-n-error?
+ - function: does it actually work?
    - use the test notes on the task to verify that the change works as expected
+   - run the full unit test suite before AND after merging to develop
 
+
+Note that the last thing on the list is "Does it work?". That's intentional: "It works." is not the same as "It's correct." for this team. Making something "work" is no excuse for sloppy hackery.
 
 If it fails your review, mark the task problem and leave the developer a note as to what the problem is.
 
