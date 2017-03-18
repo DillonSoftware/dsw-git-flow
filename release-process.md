@@ -14,7 +14,7 @@ Here's the view from 20K feet...
 10. Any issues are treated as hotfixes on `master` branch and merged to `develop` and `master`
 11. Deploy final approved candidate to production
 
-> NOTE: I think the jgitflow plugin may be the way to go for us. The "git flow" scripts are not bad, but the jgitflow plugin is geared specifically for maven-based projects using git flow and automate much of the monkey work. More information about the plugin is available here: <https://bitbucket.org/atlassian/jgit-flow/wiki/goals.wiki>
+More information about the plugin is available here: <https://bitbucket.org/atlassian/jgit-flow/wiki/goals.wiki>
 
 > In some cases, the two are virtually identical, but the "git flow" commands are more terse (feature start, for example). In those cases, I'd probably use straight-up "git flow".
 
@@ -25,8 +25,8 @@ Here's the view from 20K feet...
 ### CI configuration
 
 - develop - Builds the `develop` branch on each commit (what we have now). The build artifact is discarded.
-- nightly deploy - Builds the `develop` branch nightly and deploys the artifact to the DEV environment. Once a release is started, the configuration is changed to build the `release` branch to the DEV environment.
-- test deploy - Builds the `master` branch on each commit and deploys to the TEST environment. This will have the side-effect of making the build available to deploy to the P2 and PROD environments.
+- nightly deploy - Builds the `develop` branch nightly and deploys the artifact to the DEV environment. Once a release is started, the configuration is changed to build the `release` branch to the DEV environment (and TEST/PHASE2 when applicable).
+
 
 ### A more detailed view...
 
@@ -39,49 +39,63 @@ To start a feature branch, use one of these commands:
     $ git flow feature start 123234-My_cool_task
     $ mvn jgitflow:feature-start -DfeatureName=123234-My_cool_task
 
-> At this point the task status is: `started`
+> At this point the task status is: **`started`**
 
 To facilitate the review process, feature branches would be pushed to the remote repository.
 
-> Once the feature is ready to be merged, the task status is: `written`
+> Once the feature is code complete and ready to be reviewed by a peer developer, the task status is: **`written`**
 
 Once the feature branch has been reviewed and corrected if necessary, it is merged back to the develop branch by running one of these commands:
 
     $ git flow feature finish 123234-My_cool_task
     $ mvn jgitflow:feature-finish -DfeatureName=123234-My_cool_task
 
-> At this point the task status is: **`merged`** (NEW STATUS)
+> At this point the task status is: **`code reviewed`** (if you are doing a bunch of code reviews and want to hold on making these available to QA because they haven't been deployed anywhere. Once develop has been deployed to the DEV environment, you marke the task **`dillon review`**.
 
-> QUESTION: Do the `git flow` tools remove the remote branches on completion? If not, we'll want to do that frequently or we'll have a mess on our hands.
-
-> NOTE: `git flow feature finish foo` does NOT delete the remote branch. Bummer.
+> NOTE: `git flow feature finish foo` WILL delete the remote branch IF you are running version `1.10.2 (AVH Edition)` of the git flow plugin. Run `git flow version` to determine your version.
 
 > PROTIP: To delete a remote branch, use this: `git push origin :your_branch`
 
-Functionality should be confirmed using builds from the `develop` branch in the development environment. Both DSW and MWT should do their testing in this environment.
+Functionality should be confirmed using builds from the `develop` branch in the development environment. Both DSW and MWT should do their testing in this environment, although MWT performs most/all of their testing in our TEST environment. 
 
-> At this point the task status is: `dillon review`
+> At this point the task status is: **`dillon review`**.
 
-Once all functionality is confirmed by both DS QA and MWT QA in our `DEV` environment, all tasks should be in a state of `reviewed`. At this point, a release candidate can be established.
+Once all functionality is confirmed by DS QA and MWT QA in our `DEV` environment, all tasks should be in a state of `reviewed`. At this point, a release candidate can be established.
 
 #### Release preparation / completion
 
-Use this command to release the codebase and build an artifact to deploy:
+Use this command to build a stablization (release) branch:
 
-    $ mvn clean jgitflow:release-start jgitflow:release-finish -DskipTests
+    $ mvn clean jgitflow:release-start -DskipTests
 
-This will prompt for the release name and the next development iteration name. It will then create the release branch and switch to it, build an artifact under the target directory, merge the changes from the release branch to the develop branch and switch you back to the develop branch. The artifact (typically war file) under the `target` directory is what you deploy to the environment. Also, it deletes the release branch that was created locally by the `jgitflow:release-start` plugin.
-That second command will create the build artifact as well as merge the release branch to the `master` and `develop` branches.
+This will prompt for the release branch name which you can typically accept the default and the next development iteration name. It will then create the release branch and switch to it. It will also bump the `develop` branch version to the next development release.
 
-> At this point the task status is: `reviewed`
+At this point you will want to change the nightly Jenkins job for this project to deploy from the release branch established, typically to all three non-production environments. This will keep things in sync and allow bug fixes to be easily deployed to all environments for all testing teams involved.
 
-This is where MWT does their final testing. If they find issues, they are marked with a `problem` status and corrected using the hotfix process; if the task is correct, it is marked `approved`.
+MWT performs their testing in our TEST environment. If they find issues, they are marked with a **`problem`** status and corrected using the hotfix process; if the task is correct, it is marked `approved`.
+
+Once everything is approved you'll want to submit our localization request to iBabble On _if applicable_. Wait till you get the translation files back, add them to the release branch and then deploy new builds to environment. MWT will run through any tasks that involve i18n testing.
+
+When you are ready for the final build artifact, run the following command.
+
+	mvn clean jgitflow:release-finish -DskipTests
+
+This command will finish the release branch by, merging the release branch into `master`, delete the release branch; generate a tag for the release based on `master`, then build an artifact based off of `master` under the target directory; then merge `master` into `develop`. The artifact (typically war file but it can be a jar file) under the `target` directory is what you deploy to the environment. If no conflicts occur during this process you are good to go and you will run the following commands to push everything to the remote repository.
+
+	git push --all
+	git push --tags
+	
+IF you encounter merge conflicts during _any_ of the steps describe above when executing the `jgitflow:release-finish` command, you will need to resolve conflicts manually, merge everything manually following the steps described that the gitflow plugin follows. Following the flow is critical so be mindful of what you are merge and what you are merge into. 
+
+#### Elastic Beanstalk Deployment
+
+This is currently done from the AWS console. Go to the beanstalk production environment and clone the environment so you have something you _can_ swap to if things go sideways. Every production ElasticBeanstalk environment is configured for zero downtime deployments. We always have at least 2 app servers running behind the load balancer. The deployment configuration is setup so that beanstalk takes 1 app server out of the load balancer, deverts all traffic to the other app server and performs the deployment to the one it took out of the load balancer. When the healthcheck are healthy, it puts that one back into the load balancer and then performs the same steps on the other app server. It always does 1 app server at a time the way we have it configured. If things fail, the console will reflect that and you will need to jump on the server via ssh or try and get a snapshot of all the logs (in zip format) and troubleshoot what happened. Leave the clones around for a few hours; if no reported issues occur, you can terminate the cloned environment you activated as it's no longer needed.
+
+#### Hotfix Situations
 
 > NOTE: This is a time where REAL production issues have to be managed VERY CAREFULLY. The hotfix flow and this workflow are IDENTICAL except for the commit on `master` that they are starting from.
 
-Once the release is ready to go to production (all tasks are `approved`), the artifact can be deployed to the production environment.
-
-> At this point the task status is: `delivered`
+Once the release is deployed to production you mark all tasks **`delivered`**.
 
 The QA team can now check the application in the production environment and verify delivery.
 
