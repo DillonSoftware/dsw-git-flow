@@ -70,7 +70,7 @@ Use this command to build a stablization (release) branch:
 
 This will prompt for the release branch name which you can typically accept the default and the next development iteration name. It will then create the release branch and switch to it. It will also bump the `develop` branch version to the next development release.
 
-At this point you will want to change the nightly Jenkins job for this project to deploy from the release branch established, typically to all three non-production environments. This will keep things in sync and allow bug fixes to be easily deployed to all environments for all testing teams involved.
+At this point you will want to change the nightly Jenkins job for this project to deploy from the release branch established, typically to all three non-production environments. This will keep things in sync and allow bug fixes to be easily deployed to all environments for all testing teams involved. Also, **update the release in the dillon task system to indicate a release candidate is built.** This indicates a release branch has been established and that Dillon QA can move tasks into **`client review`** as they see fit as the release candidate branch is being deployed nightly to all non-production environments.
 
 MWT performs their testing in our TEST environment. If they find issues, they are marked with a **`problem`** status and corrected using the hotfix process; if the task is correct, it is marked `approved`.
 
@@ -90,6 +90,11 @@ IF you encounter merge conflicts during _any_ of the steps describe above when e
 #### Elastic Beanstalk Deployment
 
 This is currently done from the AWS console. Go to the beanstalk production environment and clone the environment so you have something you _can_ swap to if things go sideways. Every production ElasticBeanstalk environment is configured for zero downtime deployments. We always have at least 2 app servers running behind the load balancer. The deployment configuration is setup so that beanstalk takes 1 app server out of the load balancer, deverts all traffic to the other app server and performs the deployment to the one it took out of the load balancer. When the healthcheck are healthy, it puts that one back into the load balancer and then performs the same steps on the other app server. It always does 1 app server at a time the way we have it configured. If things fail, the console will reflect that and you will need to jump on the server via ssh or try and get a snapshot of all the logs (in zip format) and troubleshoot what happened. Leave the clones around for a few hours; if no reported issues occur, you can terminate the cloned environment you activated as it's no longer needed.
+
+#### Task Management
+
+Once the release has been deployed to production, mark all tasks as **`delivered`** and set the appropriate data/time of the actual deployment on the release. You can also make sure that the Jenkins job is either only deploying develop to the DEV environment or all non-production environments if applicable. You can also disable the jenkins nightly deploy if that makes sense so it's not building and deploying what's already out there unnecessarily. 
+
 
 #### Hotfix Situations
 
